@@ -1,292 +1,188 @@
-# n8nをGoogle Cloud Runにデプロイする完全ガイド
+# n8n Cloud Run Deployment Template
 
-## 概要
-このブログでは、ワークフロー自動化ツール「n8n」をGoogle Cloud Runにデプロイし、SupabaseをVector Storeとして設定する方法を詳しく解説します。
+A ready-to-use template for deploying [n8n](https://n8n.io) workflow automation tool on Google Cloud Run with Supabase as the database backend.
 
-## 前提条件
-- Google Cloudアカウント
-- Supabaseアカウントとプロジェクト（オプション）
-- Docker環境
-- gcloud CLIの設定済み
+## Features
 
-## セットアップ
+- 🚀 One-command deployment to Google Cloud Run
+- 🔐 Basic authentication enabled by default
+- 🗄️ Supabase PostgreSQL integration
+- 📦 Minimal Docker configuration
+- ⚡ Optimized for production use
 
-### 環境変数の設定
-1. `.env.sample`をコピーして`.env`ファイルを作成：
-   ```bash
-   cp .env.sample .env
-   ```
+## Quick Start
 
-2. `.env`ファイルを編集して実際の値を設定：
-   ```bash
-   # Google Cloud設定
-   PROJECT_ID=your-google-cloud-project-id
-   SERVICE_NAME=n8n-app
-   REGION=asia-northeast1
-   REPOSITORY=n8n-repo
-
-   # n8n設定
-   N8N_ENCRYPTION_KEY=your-secure-encryption-key
-   N8N_BASIC_AUTH_PASSWORD=your-basic-auth-password
-
-   # Supabaseデータベース設定
-   DB_TYPE=postgresdb
-   DB_POSTGRESDB_HOST=your-supabase-host.supabase.co
-   DB_POSTGRESDB_PORT=5432
-   DB_POSTGRESDB_DATABASE=postgres
-   DB_POSTGRESDB_USER=postgres
-   DB_POSTGRESDB_PASSWORD=your-supabase-password
-   DB_POSTGRESDB_SCHEMA=public
-   ```
-
-3. **重要**: `.env`ファイルはGitにコミットしないでください（.gitignoreに含まれています）
-
-## 1. プロジェクト初期設定
-
-### 1.1 Google Cloud設定
 ```bash
-# アカウント切り替え
-gcloud config set account your-email@gmail.com
-gcloud config set project your-project-id
+# 1. Clone this repository
+git clone https://github.com/zerebom/n8n-deploy-cloud-run.git
+cd n8n-deploy-cloud-run
+
+# 2. Copy and configure environment variables
+cp .env.sample .env
+# Edit .env with your values
+
+# 3. Deploy to Cloud Run
+./deploy.sh
+```
+
+## Prerequisites
+
+- Google Cloud account with billing enabled
+- [gcloud CLI](https://cloud.google.com/sdk/docs/install) installed and configured
+- Docker installed
+- (Optional) [Supabase](https://supabase.com) account for database
+
+## Environment Variables
+
+Create a `.env` file from `.env.sample` and configure the following:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `PROJECT_ID` | Your Google Cloud project ID | `my-project-123` |
+| `SERVICE_NAME` | Cloud Run service name | `n8n-app` |
+| `REGION` | Google Cloud region | `asia-northeast1` |
+| `REPOSITORY` | Artifact Registry repository name | `n8n-repo` |
+| `N8N_ENCRYPTION_KEY` | Encryption key for n8n credentials | Generate with `openssl rand -hex 32` |
+| `N8N_BASIC_AUTH_PASSWORD` | Password for basic authentication | Strong password |
+| `DB_TYPE` | Database type | `postgresdb` |
+| `DB_POSTGRESDB_HOST` | Supabase database host | `your-project.supabase.co` |
+| `DB_POSTGRESDB_PORT` | Database port | `5432` |
+| `DB_POSTGRESDB_DATABASE` | Database name | `postgres` |
+| `DB_POSTGRESDB_USER` | Database user | `postgres` |
+| `DB_POSTGRESDB_PASSWORD` | Database password | Your Supabase password |
+| `DB_POSTGRESDB_SCHEMA` | Database schema | `public` |
+
+## Initial Setup
+
+### 1. Google Cloud Configuration
+
+```bash
+# Set up your Google Cloud project
+gcloud config set project YOUR_PROJECT_ID
 gcloud config set compute/region asia-northeast1
 
-# 必要なAPIを有効化
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com containerregistry.googleapis.com artifactregistry.googleapis.com
+# Enable required APIs
+gcloud services enable run.googleapis.com
+gcloud services enable cloudbuild.googleapis.com
+gcloud services enable artifactregistry.googleapis.com
+
+# Create Artifact Registry repository
+gcloud artifacts repositories create n8n-repo \
+  --repository-format=docker \
+  --location=asia-northeast1 \
+  --description="n8n Docker images"
 ```
 
-### 1.2 Artifact Registry作成
+### 2. Database Setup (Supabase)
+
+If using Supabase as your database:
+
+1. Create a new project at [Supabase](https://supabase.com)
+2. Go to Settings → Database
+3. Copy the connection details to your `.env` file
+4. Initialize the database with the SQL script in `sample/supabase_init.sql` (if using vector store features)
+
+## Deployment
+
+Run the deployment script:
+
 ```bash
-# Dockerリポジトリ作成
-gcloud artifacts repositories create n8n-repo --repository-format=docker --location=asia-northeast1 --description="n8n Docker repository"
+./deploy.sh
 ```
 
-## 2. ファイル構成
+The script will:
 
-### 2.1 Dockerfile（最終版）
-```dockerfile
-FROM docker.n8n.io/n8nio/n8n
+1. Build a Docker image (optimized for x86_64)
+2. Push it to Google Artifact Registry
+3. Deploy to Cloud Run with the specified configuration
+
+## Post-Deployment
+
+After successful deployment, you'll see:
+
+- Service URL
+- Default username: `admin`
+- Password: The one you set in `.env`
+
+### Accessing n8n
+
+1. Open the provided Cloud Run URL
+2. Log in with basic authentication
+3. Complete n8n setup wizard
+
+## Configuration
+
+### Resource Limits
+
+Edit `deploy.sh` to adjust:
+
+- Memory: `--memory=2Gi` (default: 2GB)
+- CPU: `--cpu=1` (default: 1 vCPU)
+- Max instances: `--max-instances=10`
+- Min instances: `--min-instances=0` (scales to zero)
+
+### Security
+
+⚠️ **Important for Production**:
+
+- Generate a strong encryption key: `openssl rand -hex 32`
+- Use a secure password for basic authentication
+- Consider using Google Cloud IAM for authentication instead of basic auth
+- Store sensitive values in Google Secret Manager
+
+#### Supabase Security Considerations
+
+- **Network Security**: Configure IP allowlist in Supabase dashboard
+- **Connection Pooling**: Monitor connection limits, especially on free tier
+- **Secrets Management**: Consider using Google Secret Manager for database credentials
+- **SSL/TLS**: Always use SSL connections (Supabase enforces this by default)
+
+## Architecture
+
+```text
+┌─────────────┐     ┌─────────────────┐     ┌──────────────┐
+│   Client    │────▶│  Cloud Run      │────▶│   Supabase   │
+│  (Browser)  │     │  (n8n container)│     │  (PostgreSQL)│
+└─────────────┘     └─────────────────┘     └──────────────┘
 ```
 
-**重要ポイント**：
-- 公式推奨イメージ `docker.n8n.io/n8nio/n8n` を使用
-- 余計な設定は一切追加しない
-- デフォルトのポート5678をそのまま使用
+## Troubleshooting
 
-### 2.2 デプロイスクリプト（deploy.sh）
-```bash
-#!/bin/bash
+### Common Issues
 
-set -e
+1. **"Cannot GET /" error after deployment**
+   - This is normal during initial startup (database migrations)
+   - Wait 1-2 minutes and refresh
 
-# .envファイルから環境変数を読み込み
-if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
-else
-    echo "⚠️  .envファイルが見つかりません。.env.sampleをコピーして設定してください。"
-    exit 1
-fi
+2. **Authentication errors with Supabase**
+   - Verify database credentials in `.env`
+   - Check if your IP is allowed in Supabase settings
 
-# 設定
-IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE_NAME}"
+3. **Build fails on Apple Silicon Macs**
+   - The script includes `--platform linux/amd64` flag
+   - Ensure Docker Desktop has multi-platform support enabled
 
-echo "🚀 n8nをCloud Runにデプロイします..."
+## FAQ
 
-# 1. Artifact Registryの認証設定
-echo "🔐 Artifact Registryの認証設定..."
-gcloud auth configure-docker ${REGION}-docker.pkg.dev
+**Q: Why use port 5678 instead of 8080?**  
+A: n8n defaults to port 5678. Cloud Run can handle any port specified with `--port` flag.
 
-# 2. Dockerイメージをビルド (x86_64アーキテクチャ用)
-echo "📦 Dockerイメージをビルド中 (x86_64)..."
-docker build --platform linux/amd64 -t ${IMAGE_NAME} .
+**Q: Can I use Cloud SQL instead of Supabase?**  
+A: Yes, just update the database environment variables accordingly.
 
-# 3. Artifact Registryにプッシュ
-echo "⬆️  イメージをArtifact Registryにプッシュ中..."
-docker push ${IMAGE_NAME}
+**Q: How do I enable HTTPS?**  
+A: Cloud Run automatically provides HTTPS. No additional configuration needed.
 
-# 4. Cloud Runにデプロイ
-echo "🌐 Cloud Runにデプロイ中..."
-gcloud run deploy ${SERVICE_NAME} \
-  --image=${IMAGE_NAME} \
-  --platform=managed \
-  --region=${REGION} \
-  --allow-unauthenticated \
-  --port=5678 \
-  --memory=2Gi \
-  --cpu=1 \
-  --max-instances=10 \
-  --timeout=900 \
-  --min-instances=0 \
-  --set-env-vars="N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY},DB_TYPE=${DB_TYPE},DB_POSTGRESDB_HOST=${DB_POSTGRESDB_HOST},DB_POSTGRESDB_PORT=${DB_POSTGRESDB_PORT},DB_POSTGRESDB_DATABASE=${DB_POSTGRESDB_DATABASE},DB_POSTGRESDB_USER=${DB_POSTGRESDB_USER},DB_POSTGRESDB_PASSWORD=${DB_POSTGRESDB_PASSWORD},DB_POSTGRESDB_SCHEMA=${DB_POSTGRESDB_SCHEMA},N8N_BASIC_AUTH_ACTIVE=true,N8N_BASIC_AUTH_USER=admin,N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}"
+## Contributing
 
-# 5. デプロイ完了メッセージ
-echo "✅ デプロイ完了！"
-echo "🔗 URL: $(gcloud run services describe ${SERVICE_NAME} --region=${REGION} --format='value(status.url)')"
-echo "👤 ユーザー名: admin"
-echo "🔑 パスワード: ${N8N_BASIC_AUTH_PASSWORD}"
-echo ""
-echo "⚠️  重要: 本番環境では必ずパスワードと暗号化キーを変更してください！"
-```
+Pull requests are welcome! Please feel free to submit a PR.
 
-## 3. ハマったポイントと解決策
+## License
 
-### 3.1 アーキテクチャ問題
-**問題**: MacのApple Silicon（ARM）で作成したイメージがCloud Run（x86_64）で動かない
-```bash
-# エラー例
-terminated: Application failed to start: failed to load /sbin/tini: exec format error
-```
+MIT
 
-**解決策**: `--platform linux/amd64` フラグでクロスコンパイル
-```bash
-docker build --platform linux/amd64 -t ${IMAGE_NAME} .
-```
+## Resources
 
-### 3.2 ポート設定の混乱
-**試行錯誤の経緯**：
-1. 最初：Cloud Run標準の8080ポートを使用 → 失敗
-2. 中間：環境変数でポート変更を試行 → 失敗
-3. 最終：n8nデフォルトの5678ポートをそのまま使用 → 成功
-
-**重要な学び**：
-- Cloud Runは `--port` フラグで任意のポートを指定可能
-- n8nの公式設定をそのまま使うのがベスト
-
-### 3.3 Container Registry vs Artifact Registry
-**問題**: 古いGoogle Container Registry（GCR）を使用していた
-```bash
-# 廃止予定のGCR
-IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
-```
-
-**解決策**: Artifact Registryに移行
-```bash
-# 推奨のArtifact Registry
-IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE_NAME}"
-```
-
-### 3.4 環境変数の過剰設定
-**失敗例**：
-```bash
-# 過剰な環境変数設定
---set-env-vars="N8N_PORT=8080,N8N_HOST=0.0.0.0,N8N_PROTOCOL=https,NODE_ENV=production,N8N_LOG_LEVEL=info,N8N_BASIC_AUTH_ACTIVE=true,..."
-```
-
-**成功例**：
-```bash
-# 最小限の設定
---set-env-vars="N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}"
-```
-
-## 4. 起動プロセスの理解
-
-### 4.1 正常な起動フロー
-1. `n8n is starting up. Please wait` （起動中）
-2. `Cannot GET /` （マイグレーション実行中、約1分）
-3. HTMLページ表示（WebUI起動完了）
-
-### 4.2 デバッグ手順
-```bash
-# ログ確認
-gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=n8n-app" --limit=20
-
-# サービス状態確認
-gcloud run services describe n8n-app --region=asia-northeast1
-
-# 動作確認
-curl -I https://your-service-url.a.run.app/
-```
-
-## 5. Supabase Vector Store設定
-
-### 5.1 データベース初期化
-```sql
--- 既存テーブル削除（必要に応じて）
-DROP TABLE IF EXISTS documents CASCADE;
-DROP FUNCTION IF EXISTS match_documents;
-
--- pgvector拡張有効化
-CREATE EXTENSION IF NOT EXISTS vector;
-
--- documentsテーブル作成
-CREATE TABLE documents (
-  id BIGSERIAL PRIMARY KEY,
-  content TEXT,
-  metadata JSONB,
-  embedding VECTOR(1536)
-);
-
--- インデックス作成
-CREATE INDEX ON documents USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-
--- n8n用関数作成
-CREATE OR REPLACE FUNCTION match_documents (
-  query_embedding VECTOR(1536),
-  match_count INT DEFAULT NULL,
-  filter JSONB DEFAULT '{}'
-) RETURNS TABLE (
-  id BIGINT,
-  content TEXT,
-  metadata JSONB,
-  similarity FLOAT
-)
-LANGUAGE plpgsql
-AS $$
-#variable_conflict use_column
-BEGIN
-  RETURN QUERY
-  SELECT
-    id,
-    content,
-    metadata,
-    1 - (documents.embedding <=> query_embedding) AS similarity
-  FROM documents
-  WHERE metadata @> filter
-  ORDER BY documents.embedding <=> query_embedding
-  LIMIT match_count;
-END;
-$$;
-```
-
-### 5.2 n8nでの認証設定
-- **Host**: `https://your-project.supabase.co`
-- **Service Role Secret**: Supabaseダッシュボード > Settings > API > service_role key
-
-## 6. 重要な学び
-
-### 6.1 公式ドキュメントの重要性
-- n8n公式では `docker.n8n.io/n8nio/n8n` イメージを推奨
-- デフォルト設定をそのまま使うのが最も安全
-
-### 6.2 デバッグのアプローチ
-1. **ローカルテスト**: 問題の切り分け
-2. **ログ確認**: Cloud Runのログを詳細に確認
-3. **段階的アプローチ**: 最小構成から始めて徐々に機能追加
-
-### 6.3 Cloud Runの特性理解
-- `PORT` 環境変数の自動設定
-- `--port` フラグでカスタムポート指定可能
-- ステートレス特性（外部DBが必要）
-
-## 7. まとめ
-
-n8nのCloud Runデプロイは以下のポイントを押さえれば成功します：
-
-1. **公式イメージをそのまま使用**
-2. **最小限の環境変数設定**
-3. **適切なポート設定（5678）**
-4. **Artifact Registryの使用**
-5. **アーキテクチャの考慮（x86_64）**
-
-最終的に非常にシンプルな構成で動作し、SupabaseとVector Storeとしても連携できました。
-
-## 8. 実際のファイル構成
-
-```
-n8n-deploy-cloud-run/
-├── Dockerfile              # シンプルなDockerfile
-├── deploy.sh               # デプロイスクリプト
-├── .env.sample            # 環境変数テンプレート
-└── README.md              # このドキュメント
-```
-
-このガイドが同様の課題を抱える方の参考になれば幸いです。
+- [n8n Documentation](https://docs.n8n.io/)
+- [Cloud Run Documentation](https://cloud.google.com/run/docs)
+- [Supabase Documentation](https://supabase.com/docs)
