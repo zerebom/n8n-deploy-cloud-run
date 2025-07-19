@@ -1,0 +1,563 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "fieldToSplitOut": "feed",
+        "options": {}
+      },
+      "id": "07051070-0377-48f9-ba5d-9d0b65263ba3",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [-928, 176],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "=title: {{ $json.title }}\ncontent: {{ $json.content }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "pubdate",
+                "value": "={{ $json.pubDate }}"
+              },
+              {
+                "name": "link",
+                "value": "={{ $json.link }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "334003a9-5f21-4408-b666-66636200baa0",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "position": [-48, 304],
+      "typeVersion": 1,
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "chunkSize": 3000,
+        "options": {}
+      },
+      "id": "455e1284-6091-40bf-b839-86eb67654dec",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "position": [-80, 480],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{}]
+        }
+      },
+      "id": "2d8ac22a-515d-4355-9686-6360a433788e",
+      "name": "Get Articles Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [-1360, 176],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{}]
+        }
+      },
+      "id": "691fe426-f271-400f-a8b2-5cd2e83cbc2a",
+      "name": "Send Weekly Summary",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [-1504, 832],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=あなたが持つ「熟練の編集者兼リサーチャー」の能力を最大限に活かし、指定された出力フォーマットに従って要約を作成してください。Vectore Storeを使って記事を検索してください。検索するキーワードは  {{ $json.Topic }} です",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# あなたの役割\nあなたは、提供された技術記事を分析し、その内容と重要性を、多忙なプロフェッショナル向けに分かりやすく解説する「専門技術アナリスト兼エディター」です。\n\n# 行動原則\nあなたの仕事は、以下のステップで構成されます。\n\n0.  **情報検索**: まず、ユーザーの興味関心である「{{トピック}}」に関連する情報を、あなたが利用できるVector Store検索ツールを使って検索し、関連性の高い記事を複数件取得してください。\n\n1.  **個別理解と要約**: 次に、取得した各記事を精読し、以下の要件に従って個別に要約を作成します。\n    * 背景と目的の把握: 「なぜこの記事が書かれたのか」「解決しようとしている課題は何か」を理解します。\n    * 核心部分の抽出: 記事の最も重要な主張、提案、または発見を特定します。\n    * 具体例の認識: 主張を支える具体的な技術名、製品名、数値データ、手法などを正確に抜き出します。\n    * **要点の文章化**: **`key_points`を作成する際は、単語やフレーズをリストアップするのではなく、それぞれの要点が何を意味するのかが分かる、自己完結した完全な文章として記述してください。**\n\n2.  **重要度評価**: ユーザーの興味関心に基づき、各記事の「新規性」「実用性」「影響の大きさ」といった観点から重要度を評価・ランク付けしてください。\n\n3.  **トップ5の選抜とJSON生成**: 最も重要かつだと判断した上位5つの記事だけを選び抜き、指定されたJSONフォーマットで出力してください。更に、最新かつ多様なデータソースから取得するように意識してください。\n\n# 出力フォーマット (JSON)\n- あなたの最終的な出力は、必ず指定された構造のJSONオブジェクトのみとしてください。JSONの前後に説明文などの余計なテキストを含めないでください。\n- JSONのルートオブジェクトは`summaries`というキーを持ち、その値は記事要約オブジェクトの配列とします。\n- 配列の各要素（記事要約オブジェクト）は、以下のキーを持つ必要があります。\n  - `rank`: (数値) 記事の重要度ランキング (1から5)\n  - `title`: (文字列) 記事の正確なタイトル\n  - `url`: (文字列) 記事の元URL\n  - `gist`: (文字列) 約300文字程度で、記事の背景、核心、結論をまとめた「詳細な要約」\n  - `key_points`: (文字列の配列) 記事から抽出した、具体的な技術名、数値、手法などを含む要点を、**それぞれが独立した文章として完結する形で3〜5個**"
+        }
+      },
+      "id": "a8b5c07d-85ec-4692-8d23-f0938180a0ed",
+      "name": "News reader AI",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [-976, 752],
+      "typeVersion": 1.9,
+      "retryOnFail": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "763ee373-dc08-4f0a-99e7-12444bd3f97e",
+              "name": "Topic",
+              "value": "AI",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6730767b-9370-4926-9744-189bf2e266cb",
+      "name": "Your topics of interest",
+      "type": "n8n-nodes-base.set",
+      "position": [-1296, 832],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fb06d929-42cd-41b3-97ee-2e2d56f5d72a",
+              "name": "feed",
+              "value": "[\"https://zenn.dev/feed\",\"https://www.ycombinator.com/blog/rss\",\"https://tldr.tech/api/rss/ai\",\"https://linear.app/rss/blog.xml\"]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c944c594-1332-44dc-94f6-20e751be7d74",
+      "name": "Set Tech News RSS Feeds",
+      "type": "n8n-nodes-base.set",
+      "position": [-1136, 176],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.feed }}",
+        "options": {
+          "ignoreSSL": false
+        }
+      },
+      "id": "cbdb5d10-e151-4afe-a225-05a5a0b810ff",
+      "name": "Read RSS News Feeds",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "position": [-704, 176],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "modelName": "models/embedding-001"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [-384, 432],
+      "id": "b714b4f6-07fb-41ed-b609-66b2a4a7c1b9",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I8b0crHvoGwBefuj",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "49b20b69-93fb-457e-85f8-1a22f1512f87",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "44b7f006-ca7a-439b-a459-b7e315bf0ca5",
+              "name": "pubDate",
+              "value": "={{ $json.pubDate }}",
+              "type": "string"
+            },
+            {
+              "id": "310eaa3c-0ec7-4313-9e8b-a2e0caf71b0a",
+              "name": "content",
+              "value": "={{ ($json.content && $json.content.length > 200) ? $json.content : $json['content:encodedSnippet'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a8456bad-bf9c-4eaf-881b-19f8483095a4",
+              "name": "link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3d085231-e398-4690-a347-2ed7f2929a03",
+      "name": "Set and Normalize Fields",
+      "type": "n8n-nodes-base.set",
+      "position": [-480, 176],
+      "typeVersion": 3.4,
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [-1168, 992],
+      "id": "a03b2d9b-2133-459e-b48d-873e425557e1",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I8b0crHvoGwBefuj",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/embedding-001"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [-1024, 1280],
+      "id": "07c7ab00-5b84-46f7-abc5-42109dc2385d",
+      "name": "Embeddings Google Gemini2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I8b0crHvoGwBefuj",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"summaries\": [\n    {\n      \"rank\": 1,\n      \"title\": \"neoAI 日本語 Reasoning Model を開発 - Part 1 継続事前学習\",\n      \"url\": \"https://zenn.dev/neoai/articles/1670bd029093b0\",\n      \"gist\": \"日本語の大規模言語モデル（LLM）における高度な論理的思考能力の需要が高まる中、neoAIがその課題に応える新たなモデルを公開しました。この「Reasoning Model」は、思考の過程を日本語で出力する機能を持ち、透明性と推論能力を両立させています。今回公開された「neoAI-JP-QwQ-32B」と「neoAI-JP-DeepSeek-Qwen-32B」は、Hugging Faceで利用可能となり、日本語AI研究開発の新たな基盤となることが期待されます。\",\n      \"key_points\": [\n        \"思考過程を日本語で出力する「Reasoning Model」として、2つの新モデルを開発・公開。\",\n        \"公開されたモデルは「neoAI-JP-QwQ-32B」と「neoAI-JP-DeepSeek-Qwen-32B」の2種類。\",\n        \"OpenAIのoシリーズやDeepSeek-R1など、世界トップクラスのモデルと同様の高度な推論能力を目指している。\",\n        \"モデルはHugging Faceリポジトリを通じて無償でアクセス可能であり、研究や開発に利用できる。\"\n      ]\n    },\n    {\n      \"rank\": 2,\n      \"title\": \"Grok 4 の発表まとめ＆試してみた\",\n      \"url\": \"https://zenn.dev/schroneko/articles/grok-4-overview-and-review\",\n      \"gist\": \"xAIが次世代大規模言語モデル「Grok 4」を正式に発表し、AI業界の性能競争が新たな段階に入ったことを示しました。特に、大学レベルの知識と推論能力を測る高難易度ベンチマーク「Humanity's Last Exam」で卓越したスコアを記録した点が注目されています。この新モデルは、X(旧Twitter)の有料プラン加入者向けに順次提供が開始されており、API経由での利用も可能です。\",\n      \"key_points\": [\n        \"xAIの最新LLM「Grok 4」が、高難易度ベンチマーク「Humanity's Last Exam」で卓越した性能を記録。\",\n        \"利用方法は、Xの有料プラン「プレミアムプラス」または「SuperGrok」への加入、および開発者向けAPI経由。\",\n        \"単なる性能向上だけでなく、リアルタイム情報へのアクセスとユーモアのある応答もGrokシリーズの特徴として継承。\",\n        \"記事には、公式発表動画やドキュメントへのリンク、実際の試用レビューが含まれている。\"\n      ]\n    }\n  ]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [-688, 992],
+      "id": "5b5300ce-4568-45de-93c8-fb5f171b1879",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [-672, 1264],
+      "id": "297d5522-0d10-4cd4-812a-25074d5a74bd",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I8b0crHvoGwBefuj",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# 最初のアイテム（JSONデータ全体）を取得\ninput_data = _input.first().json\n\n# メッセージ全体を格納する文字列を初期化\n# 今週のサマリーであることを示すタイトルを追加\nmessage = \"# 📝 今週のAI技術ニュースサマリー\\n\\n\"\n\n# 各記事の要約をループ処理\nfor summary in input_data.get('output', {}).get('summaries', []):\n    rank = summary.get('rank', '')\n    title = summary.get('title', '（タイトルなし）')\n    url = summary.get('url', '')\n    gist = summary.get('gist', '（概要なし）')\n    key_points = summary.get('key_points', [])\n    \n    # Markdown形式で記事のセクションを作成\n    message += f\"## {rank}. [{title}]({url})\\n\"\n    message += f\"**一言でいうと**\\n{gist}\\n\\n\"\n    message += \"**主な内容**\\n\"\n    \n    # 箇条書きを作成\n    for point in key_points:\n        message += f\"- {point}\\n\"\n    \n    # 記事ごとの区切り線を追加\n    message += \"\\n---\\n\\n\"\n\n# 次のDiscordノードで使うために、整形したメッセージをjsonフィールドに入れて返す\n# 1つのアイテムだけを返す\nreturn [{\"json\": {\"message\": message}}]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-416, 656],
+      "id": "232da712-55d6-4b2a-aa4c-57da33dfc899",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.discord_chunk }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [32, 656],
+      "id": "1c8d7761-6291-417c-aa66-74350a3bf0f6",
+      "name": "Discord",
+      "webhookId": "YOUR_DISCORD_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# 返却用の空のリストを準備\nnew_items = []\n\n# Discordの文字数制限（少し余裕を持たせる）\nchunk_size = 1990\n\n# 前のノードから長いメッセージ本文を取得\nlong_message = _input.first().json.get('message', '')\n\n# メッセージをchunk_sizeごとに分割してループ\nfor i in range(0, len(long_message), chunk_size):\n    # テキストをスライスしてチャンクを作成\n    chunk = long_message[i:i + chunk_size]\n    \n    # n8nが期待する形式で、新しいアイテムの辞書を作成\n    new_item = {\n        'json': {\n            # 次のDiscordノードで使いやすいようにキー名を付ける\n            'discord_chunk': chunk\n        }\n    }\n    # 新しいアイテムをリストに追加\n    new_items.append(new_item)\n\n# 分割されたチャンクを含む新しいアイテムのリストを返す\nreturn new_items"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-208, 656],
+      "id": "e3b9bd7f-9ea0-4689-af7f-62f5df9483f0",
+      "name": "Sprit Outputs"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [-176, 48],
+      "id": "f01bbb5e-b61c-4f3c-bd9f-4100da46dd21",
+      "name": "Supabase Vector Store",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "retryOnFail": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "b4Z5X3hKHCc2Jlb0",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "コンテンツが格納されているVectore Store",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "topK": 15,
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [-976, 1056],
+      "id": "2390f04e-1acd-47b8-8716-4c759c631255",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "b4Z5X3hKHCc2Jlb0",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Read RSS News Feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "News reader AI": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Articles Daily": {
+      "main": [
+        [
+          {
+            "node": "Set Tech News RSS Feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read RSS News Feeds": {
+      "main": [
+        [
+          {
+            "node": "Set and Normalize Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Weekly Summary": {
+      "main": [
+        [
+          {
+            "node": "Your topics of interest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Tech News RSS Feeds": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Your topics of interest": {
+      "main": [
+        [
+          {
+            "node": "News reader AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set and Normalize Fields": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "News reader AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "News reader AI",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Sprit Outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sprit Outputs": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "News reader AI",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3ad83fb2-b2cb-470d-b6e4-4c5b751fe3de",
+  "meta": {
+    "instanceId": "44b765c4f0d3ed8ef7be79483db330becf61721ec7c0b4f6c1ee05bcb027796f"
+  },
+  "id": "9SdDjvFbYD2Q7If9",
+  "tags": []
+}
