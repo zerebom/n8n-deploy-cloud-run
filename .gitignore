@@ -1,0 +1,22 @@
+# 環境変数ファイル（機密情報が含まれるため）
+.env
+
+# ログファイル
+*.log
+
+# 一時ファイル
+*.tmp
+*.temp
+
+# IDEファイル
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# その他の機密ファイル
+credentials.json
+service-account.json
